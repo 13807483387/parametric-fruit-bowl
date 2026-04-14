@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>参数化金属折面果盘配置器</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="workspace">
+      <section class="preview-area">
+        <header class="workspace-header">
+          <div>
+            <p class="eyebrow">计算设计原型</p>
+            <h1>参数化金属折面果盘配置器</h1>
+          </div>
+
+          <div class="header-tags">
+            <span class="tag tag-accent">Sharp Faceted Metallic Bowl</span>
+            <span class="tag">顶视图 + Three.js 实时预览</span>
+          </div>
+        </header>
+
+        <div class="preview-grid">
+          <section class="view-card">
+            <div class="view-card-head">
+              <div>
+                <p class="view-label">顶视图</p>
+                <h2>折线轮廓与三角剖分</h2>
+              </div>
+              <span class="view-note">不规则锋利边缘 / 低多边形结构逻辑 / 基座支撑投影</span>
+            </div>
+            <div id="topViewSurface" class="view-body"></div>
+          </section>
+
+          <section class="view-card">
+            <div class="view-card-head">
+              <div>
+                <p class="view-label">三维视图</p>
+                <h2>镜面金属折面果盘</h2>
+              </div>
+              <span class="view-note">Orbit 旋转 / RoomEnvironment / 强侧光高光</span>
+            </div>
+            <div id="threeView" class="view-body three-view"></div>
+          </section>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">折面系统</span>
+            <strong id="assemblyValue" class="metric-value">0 面 / 0 三角板</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">最大开口</span>
+            <strong id="diameterValue" class="metric-value">0 mm</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">果盘高度</span>
+            <strong id="openingValue" class="metric-value">0 mm</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">底座跨度</span>
+            <strong id="frameWidthValue" class="metric-value">0 mm</strong>
+          </div>
+        </div>
+
+        <section class="assistant-panel">
+          <div class="assistant-head">
+            <div>
+              <p class="view-label">AI 需求对话框</p>
+              <h2>描述你想要的折面、镂空和轮廓</h2>
+            </div>
+            <span class="view-note">输入自然语言后，系统会自动转换为参数并同步更新模型</span>
+          </div>
+
+          <div id="assistantFeed" class="assistant-feed"></div>
+
+          <div class="assistant-inputs">
+            <textarea
+              id="aiPrompt"
+              class="assistant-textarea"
+              placeholder="例如：我想要更锋利的边缘，镂空更大一些，但底座要更稳，整体半径控制在 150 左右。"
+            ></textarea>
+
+            <div class="assistant-actions">
+              <button id="aiApplyButton" class="button button-secondary" type="button">
+                AI 生成参数
+              </button>
+              <button id="aiClearButton" class="button" type="button">
+                清空对话
+              </button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <aside class="control-area">
+        <section class="panel pricing-panel">
+          <div class="panel-head">
+            <p class="panel-label">预估总价</p>
+            <strong id="totalPrice" class="total-price">￥0</strong>
+          </div>
+
+          <div class="pricing-list">
+            <div class="pricing-row">
+              <span>金属板材费</span>
+              <strong id="materialCost">￥0</strong>
+            </div>
+            <div class="pricing-row">
+              <span>切割折弯费</span>
+              <strong id="cuttingCost">￥0</strong>
+            </div>
+            <div class="pricing-row">
+              <span>装配费</span>
+              <strong id="assemblyCost">￥0</strong>
+            </div>
+            <div class="pricing-row">
+              <span>参数化设计费</span>
+              <strong id="designCost">￥0</strong>
+            </div>
+          </div>
+
+          <p class="pricing-note">
+            当前价格为原型阶段估算，用于验证折面金属果盘的参数范围与制造复杂度，不含运输与量产优化。
+          </p>
+        </section>
+
+        <section class="panel controls-panel">
+          <div class="panel-head panel-head-compact">
+            <p class="panel-label">参数设置</p>
+            <span class="panel-note">顶视图与三维预览共用一套折面 bowl 几何逻辑</span>
+          </div>
+
+          <section class="control-group">
+            <div class="group-head">
+              <p class="group-title">轮廓参数</p>
+              <span class="group-note">控制开口、深度、外轮廓与壁板倾角</span>
+            </div>
+
+            <label class="control" for="segments">
+              <div class="control-head">
+                <span>折面数量</span>
+                <strong id="segmentsValue">18</strong>
+              </div>
+              <input id="segments" name="segments" type="range" min="8" max="32" step="1" value="18" />
+            </label>
+
+            <label class="control" for="opening">
+              <div class="control-head">
+                <span>开口比例</span>
+                <strong id="openingValueLabel">1.05x</strong>
+              </div>
+              <input id="opening" name="opening" type="range" min="0.78" max="1.32" step="0.01" value="1.05" />
+            </label>
+
+            <label class="control" for="height">
+              <div class="control-head">
+                <span>整体高度</span>
+                <strong id="heightValue">48 mm</strong>
+              </div>
+              <input id="height" name="height" type="range" min="24" max="86" step="1" value="48" />
+            </label>
+
+            <label class="control" for="tilt">
+              <div class="control-head">
+                <span>壁板倾角</span>
+                <strong id="tiltValue">18°</strong>
+              </div>
+              <input id="tilt" name="tilt" type="range" min="6" max="34" step="1" value="18" />
+            </label>
+          </section>
+
+          <section class="control-group">
+            <div class="group-head">
+              <p class="group-title">折面参数</p>
+              <span class="group-note">控制锋利峰谷、金属厚度与整体尺度</span>
+            </div>
+
+            <label class="control" for="irregularity">
+              <div class="control-head">
+                <span>边缘不规则度</span>
+                <strong id="irregularityValue">4 / 10</strong>
+              </div>
+              <input id="irregularity" name="irregularity" type="range" min="0" max="10" step="1" value="4" />
+            </label>
+
+            <label class="control" for="thickness">
+              <div class="control-head">
+                <span>金属板厚度</span>
+                <strong id="thicknessValue">6 mm</strong>
+              </div>
+              <input id="thickness" name="thickness" type="range" min="2" max="14" step="1" value="6" />
+            </label>
+
+            <label class="control" for="radius">
+              <div class="control-head">
+                <span>整体半径</span>
+                <strong id="radiusValue">128 mm</strong>
+              </div>
+              <input id="radius" name="radius" type="range" min="88" max="180" step="1" value="128" />
+            </label>
+          </section>
+
+          <section class="control-group">
+            <div class="group-head">
+              <p class="group-title">镂空参数</p>
+              <span class="group-note">保持结构完整的前提下，调节外壁镂空比例、尖锐度与位置</span>
+            </div>
+
+            <label class="control" for="cutoutScale">
+              <div class="control-head">
+                <span>镂空比例</span>
+                <strong id="cutoutScaleValue">14%</strong>
+              </div>
+              <input id="cutoutScale" name="cutoutScale" type="range" min="0" max="32" step="1" value="14" />
+            </label>
+
+            <label class="control" for="cutoutSharpness">
+              <div class="control-head">
+                <span>镂空尖锐度</span>
+                <strong id="cutoutSharpnessValue">46%</strong>
+              </div>
+              <input id="cutoutSharpness" name="cutoutSharpness" type="range" min="24" max="76" step="1" value="46" />
+            </label>
+
+            <label class="control" for="cutoutBand">
+              <div class="control-head">
+                <span>镂空位置</span>
+                <strong id="cutoutBandValue">50%</strong>
+              </div>
+              <input id="cutoutBand" name="cutoutBand" type="range" min="36" max="64" step="1" value="50" />
+            </label>
+          </section>
+        </section>
+
+        <section class="panel action-panel">
+          <div class="button-row">
+            <button id="generateButton" class="button button-secondary" type="button">
+              生成方案
+            </button>
+            <button id="exportButton" class="button" type="button">
+              导出方案
+            </button>
+            <button id="buyButton" class="button button-primary" type="button">
+              立即下单
+            </button>
+          </div>
+
+          <p id="statusLine" class="status-line">
+            当前模型支持结构化镂空与 AI 参数驱动：会在保持果盘完整受力的前提下同步更新顶视图、三维和价格。
+          </p>
+        </section>
+      </aside>
+    </main>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+      }
+    </script>
+    <script src="./script.js"></script>
+  </body>
+</html>
