@@ -46,6 +46,20 @@ const microHoleShapeDefinitions = {
   slot: { label: "????", complexity: 1.14 },
 };
 
+const productCardModeLabels = {
+  kaleido: "分割型",
+  panel: "镂空型",
+  micro: "打孔型",
+};
+
+const productCardHoleLabels = {
+  triangle: "三角形",
+  quad: "四边形",
+  pentagon: "五边形",
+  circle: "圆形",
+  slot: "长条放射型",
+};
+
 const presetDefinitions = {
   balanced: {
     label: "平衡原型",
