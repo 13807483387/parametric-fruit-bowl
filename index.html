@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>参数化金属折面果盘配置器</title>
+    <title>鍙傛暟鍖栭噾灞炴姌闈㈡灉鐩橀厤缃櫒</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -11,24 +11,50 @@
       <section class="preview-area">
         <header class="workspace-header">
           <div>
-            <p class="eyebrow">计算设计原型</p>
-            <h1>参数化金属折面果盘配置器</h1>
+            <p class="eyebrow">璁＄畻璁捐鍘熷瀷</p>
+            <h1>鍙傛暟鍖栭噾灞炴姌闈㈡灉鐩橀厤缃櫒</h1>
           </div>
 
-          <div class="header-tags">
-            <span class="tag tag-accent">Sharp Faceted Metallic Bowl</span>
-            <span class="tag">顶视图 + Three.js 实时预览</span>
+          <div class="header-actions">
+            <button id="descriptionButton" class="button button-inline button-secondary" type="button">
+              鐢熸垚浜у搧璇存槑
+            </button>
+            <button id="heroImageButton" class="button button-inline" type="button">
+              鐢熸垚浜у搧鏁堟灉鍥?            </button>
           </div>
         </header>
+
+        <section class="preset-strip" aria-label="蹇€熸柟妗?>
+          <button class="preset-card is-active" data-preset="balanced" type="button">
+            <span class="preset-label">蹇€熸柟妗?/span>
+            <strong>骞宠　鍘熷瀷</strong>
+            <span class="preset-note">浣庣煯銆佺ǔ瀹氥€侀€傚悎浣滀负鍩虹姣嶅瀷</span>
+          </button>
+          <button class="preset-card" data-preset="sharp" type="button">
+            <span class="preset-label">蹇€熸柟妗?/span>
+            <strong>閿嬪埄鏅堕潰</strong>
+            <span class="preset-note">寮哄寲鎶樿銆佽竟缂樺嘲璋峰拰閲戝睘鍙嶅樊</span>
+          </button>
+          <button class="preset-card" data-preset="airy" type="button">
+            <span class="preset-label">蹇€熸柟妗?/span>
+            <strong>杞婚噺閫氶€?/strong>
+            <span class="preset-note">寮€鍙ｆ洿鑸掑睍锛岄晜绌烘洿杞荤泩</span>
+          </button>
+          <button class="preset-card" data-preset="sculptural" type="button">
+            <span class="preset-label">蹇€熸柟妗?/span>
+            <strong>闆曞娣卞彛</strong>
+            <span class="preset-note">鏇村己纰椾綋娣卞害鍜屾洿鏄庣‘鐨勬姌闈綋閲?/span>
+          </button>
+        </section>
 
         <div class="preview-grid">
           <section class="view-card">
             <div class="view-card-head">
               <div>
-                <p class="view-label">顶视图</p>
-                <h2>折线轮廓与三角剖分</h2>
+                <p class="view-label">椤惰鍥?/p>
+                <h2>鎶樼嚎杞粨涓庝笁瑙掑墫鍒?/h2>
               </div>
-              <span class="view-note">不规则锋利边缘 / 低多边形结构逻辑 / 基座支撑投影</span>
+              <span class="view-note">涓嶈鍒欓攱鍒╄竟缂?/ 浣庡杈瑰舰缁撴瀯閫昏緫 / 鍩哄骇鏀拺鎶曞奖</span>
             </div>
             <div id="topViewSurface" class="view-body"></div>
           </section>
@@ -36,41 +62,22 @@
           <section class="view-card">
             <div class="view-card-head">
               <div>
-                <p class="view-label">三维视图</p>
-                <h2>镜面金属折面果盘</h2>
+                <p class="view-label">涓夌淮瑙嗗浘</p>
+                <h2>闀滈潰閲戝睘鎶橀潰鏋滅洏</h2>
               </div>
-              <span class="view-note">Orbit 旋转 / RoomEnvironment / 强侧光高光</span>
+              <span class="view-note">Orbit 鏃嬭浆 / RoomEnvironment / 寮轰晶鍏夐珮鍏?/span>
             </div>
             <div id="threeView" class="view-body three-view"></div>
           </section>
         </div>
 
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <span class="metric-label">折面系统</span>
-            <strong id="assemblyValue" class="metric-value">0 面 / 0 三角板</strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">最大开口</span>
-            <strong id="diameterValue" class="metric-value">0 mm</strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">果盘高度</span>
-            <strong id="openingValue" class="metric-value">0 mm</strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">底座跨度</span>
-            <strong id="frameWidthValue" class="metric-value">0 mm</strong>
-          </div>
-        </div>
-
         <section class="assistant-panel">
           <div class="assistant-head">
             <div>
-              <p class="view-label">AI 需求对话框</p>
-              <h2>描述你想要的折面、镂空和轮廓</h2>
+              <p class="view-label">AI 闇€姹傚璇濇</p>
+              <h2>鎻忚堪浣犳兂瑕佺殑閫犲瀷鏂规銆佸瓟娲為€昏緫鍜岃疆寤撶洰鏍?/h2>
             </div>
-            <span class="view-note">输入自然语言后，系统会自动转换为参数并同步更新模型</span>
+              <span class="view-note">灏介噺鎸夆€滄柟妗堟ā寮?/ 杞粨鍊惧悜 / 瀛斿瀷鏂规 / 闀傜┖灏哄害 / 澶氳竟褰㈣竟鏁?/ 灏哄闄愬埗鈥濈殑鏍煎紡鎻忚堪锛岀郴缁熶細鑷姩鏄犲皠鎴愬弬鏁?/span>
           </div>
 
           <div id="assistantFeed" class="assistant-feed"></div>
@@ -79,67 +86,145 @@
             <textarea
               id="aiPrompt"
               class="assistant-textarea"
-              placeholder="例如：我想要更锋利的边缘，镂空更大一些，但底座要更稳，整体半径控制在 150 左右。"
+              placeholder="绀轰緥锛氬垏鎹㈠埌鍒嗗壊鍨嬶紝鍋氭垚鍏竟褰竾鑺辩瓛鎷肩墖锛屽紑鍙ｆ洿澶э紝鏁翠綋娴呬竴鐐癸紝鍘氬害 5 mm锛屽崐寰?150銆傛垨鑰咃細鏀规垚鎵撳瓟鍨嬶紝鍒囧埌鍦嗗瓟鎴栭暱鏉℃斁灏勫瓟锛岄晜绌哄昂搴?22锛岄晜绌哄甫鍋忎腑涓娿€?
             ></textarea>
 
             <div class="assistant-actions">
               <button id="aiApplyButton" class="button button-secondary" type="button">
-                AI 生成参数
+                AI 鐢熸垚鍙傛暟
               </button>
               <button id="aiClearButton" class="button" type="button">
-                清空对话
+                娓呯┖瀵硅瘽
               </button>
             </div>
           </div>
+        </section>
+        <section id="aiHeroImageCard" class="view-card ai-hero-result-card">
+          <div class="view-card-head">
+            <div>
+              <p class="view-label">AI 鏁堟灉鍥?/p>
+              <h2>Flask 鍚庣鐢熸垚鐨勪骇鍝佹晥鏋滃浘</h2>
+            </div>
+            <span id="aiHeroImageStatus" class="view-note">鐐瑰嚮鈥滅敓鎴愪骇鍝佹晥鏋滃浘鈥濆悗鍦ㄨ繖閲屾樉绀?AI 杩斿洖鍥剧墖</span>
+          </div>
+          <div class="view-body ai-hero-result-body">
+            <img id="aiHeroImage" class="ai-hero-result-image is-hidden" alt="AI 鐢熸垚鐨勪骇鍝佹晥鏋滃浘" />
+            <div id="aiHeroPlaceholder" class="ai-hero-placeholder">
+              褰撳墠杩樻病鏈?AI 鏁堟灉鍥俱€傜偣鍑讳笂鏂光€滅敓鎴愪骇鍝佹晥鏋滃浘鈥濇寜閽悗锛屽皢璋冪敤 Flask 鍚庣骞跺湪杩欓噷鏄剧ず缁撴灉銆?            </div>
+          </div>
+        </section>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">鎶橀潰绯荤粺</span>
+            <strong id="assemblyValue" class="metric-value">0 闈?/ 0 涓夎鏉?/strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">鏈€澶у紑鍙?/span>
+            <strong id="diameterValue" class="metric-value">0 mm</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">鏋滅洏楂樺害</span>
+            <strong id="openingValue" class="metric-value">0 mm</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">搴曞骇璺ㄥ害</span>
+            <strong id="frameWidthValue" class="metric-value">0 mm</strong>
+          </div>
+        </div>
+
+
         </section>
       </section>
 
       <aside class="control-area">
         <section class="panel pricing-panel">
           <div class="panel-head">
-            <p class="panel-label">预估总价</p>
-            <strong id="totalPrice" class="total-price">￥0</strong>
+            <p class="panel-label">寤鸿鍞环</p>
+            <strong id="totalPrice" class="total-price">锟?</strong>
           </div>
 
           <div class="pricing-list">
             <div class="pricing-row">
-              <span>金属板材费</span>
-              <strong id="materialCost">￥0</strong>
+              <span>涓嶉攬閽㈡澘鏉愪笌鎹熻€?/span>
+              <strong id="materialCost">锟?</strong>
             </div>
             <div class="pricing-row">
-              <span>切割折弯费</span>
-              <strong id="cuttingCost">￥0</strong>
+              <span>婵€鍏夊垏鍓蹭笌寮€瀛?/span>
+              <strong id="cuttingCost">锟?</strong>
             </div>
             <div class="pricing-row">
-              <span>装配费</span>
-              <strong id="assemblyCost">￥0</strong>
+              <span>瑁呴厤鐒婃帴涓庤〃闈㈠鐞?/span>
+              <strong id="assemblyCost">锟?</strong>
             </div>
             <div class="pricing-row">
-              <span>参数化设计费</span>
-              <strong id="designCost">￥0</strong>
+              <span>鍙傛暟鍖栧伐绋嬩笌鎵撴牱</span>
+              <strong id="designCost">锟?</strong>
             </div>
           </div>
 
-          <p class="pricing-note">
-            当前价格为原型阶段估算，用于验证折面金属果盘的参数范围与制造复杂度，不含运输与量产优化。
-          </p>
+          <div class="pricing-row pricing-row-subtotal">
+            <span>鍒堕€犳垚鏈悎璁?/span>
+            <strong id="costSubtotal">锟?</strong>
+          </div>
+
+          <p id="pricingNote" class="pricing-note">
+            褰撳墠鎶ヤ环鍩轰簬灏忓昂瀵?304 涓嶉攬閽㈡灉鐩樺師鍨嬩及绠楋紱寤鸿鍞环閫氬父鎸夊埗閫犳垚鏈害 脳 5.0 璁＄畻锛屽苟灏嗘渶缁堝敭浠锋帶鍒跺湪 锟?80 浠ュ唴锛屼笉鍚繍杈撲笌绋庤垂銆?          </p>
         </section>
 
         <section class="panel controls-panel">
           <div class="panel-head panel-head-compact">
-            <p class="panel-label">参数设置</p>
-            <span class="panel-note">顶视图与三维预览共用一套折面 bowl 几何逻辑</span>
+            <p class="panel-label">鍙傛暟璁剧疆</p>
+            <span class="panel-note">椤惰鍥句笌涓夌淮棰勮鍏辩敤涓€濂楁姌闈?bowl 鍑犱綍閫昏緫</span>
           </div>
 
           <section class="control-group">
             <div class="group-head">
-              <p class="group-title">轮廓参数</p>
-              <span class="group-note">控制开口、深度、外轮廓与壁板倾角</span>
+              <p class="group-title">閫犲瀷鏂规</p>
+              <span class="group-note">鍒囨崲鍒嗗壊鍨嬨€侀晜绌哄瀷涓庢墦瀛斿瀷锛屽苟鎺у埗鏁翠綋鎷煎悎杞粨鐨勫杈瑰舰杈规暟</span>
+            </div>
+
+            <div class="mode-switch" id="cutoutModeSwitch">
+              <button class="mode-button is-active" data-mode="kaleido" type="button">
+                鍒嗗壊鍨?              </button>
+              <button class="mode-button" data-mode="panel" type="button">
+                闀傜┖鍨?              </button>
+              <button class="mode-button" data-mode="micro" type="button">
+                鎵撳瓟鍨?              </button>
+            </div>
+
+            <label class="control" for="polygonSides">
+              <div class="control-head">
+                <span>澶氳竟褰㈣竟鏁?/span>
+                <strong id="polygonSidesValue">6 杈?/strong>
+              </div>
+              <input id="polygonSides" name="polygonSides" type="range" min="3" max="10" step="1" value="6" />
+            </label>
+          </section>
+
+          <section id="panelModeControlsGroup" class="control-group is-hidden">
+            <div class="group-head">
+              <p class="group-title">鍚屽舰灞傜骇</p>
+              <span class="group-note">浠呭悓褰㈠唴闀傜┖浣跨敤锛氭帶鍒跺灞傞潰鐗囩殑灞傛暟涓庡眰闂撮€掑彉鍏崇郴</span>
+            </div>
+
+            <label class="control" for="panelLayers">
+              <div class="control-head">
+                <span>灞傜骇鏁伴噺</span>
+                <strong id="panelLayersValue">2 灞?/strong>
+              </div>
+              <input id="panelLayers" name="panelLayers" type="range" min="1" max="4" step="1" value="2" />
+            </label>
+          </section>
+
+          <section class="control-group">
+            <div class="group-head">
+              <p class="group-title">杞粨鍙傛暟</p>
+              <span class="group-note">鎺у埗寮€鍙ｃ€佹繁搴︺€佸杞粨涓庡鏉垮€捐</span>
             </div>
 
             <label class="control" for="segments">
               <div class="control-head">
-                <span>折面数量</span>
+                <span>鎶橀潰鏁伴噺</span>
                 <strong id="segmentsValue">18</strong>
               </div>
               <input id="segments" name="segments" type="range" min="8" max="32" step="1" value="18" />
@@ -147,7 +232,7 @@
 
             <label class="control" for="opening">
               <div class="control-head">
-                <span>开口比例</span>
+                <span>寮€鍙ｆ瘮渚?/span>
                 <strong id="openingValueLabel">1.05x</strong>
               </div>
               <input id="opening" name="opening" type="range" min="0.78" max="1.32" step="0.01" value="1.05" />
@@ -155,7 +240,7 @@
 
             <label class="control" for="height">
               <div class="control-head">
-                <span>整体高度</span>
+                <span>鏁翠綋楂樺害</span>
                 <strong id="heightValue">48 mm</strong>
               </div>
               <input id="height" name="height" type="range" min="24" max="86" step="1" value="48" />
@@ -163,8 +248,8 @@
 
             <label class="control" for="tilt">
               <div class="control-head">
-                <span>壁板倾角</span>
-                <strong id="tiltValue">18°</strong>
+                <span>澹佹澘鍊捐</span>
+                <strong id="tiltValue">18掳</strong>
               </div>
               <input id="tilt" name="tilt" type="range" min="6" max="34" step="1" value="18" />
             </label>
@@ -172,13 +257,13 @@
 
           <section class="control-group">
             <div class="group-head">
-              <p class="group-title">折面参数</p>
-              <span class="group-note">控制锋利峰谷、金属厚度与整体尺度</span>
+              <p class="group-title">鎶橀潰鍙傛暟</p>
+              <span class="group-note">鎺у埗閿嬪埄宄拌胺銆侀噾灞炲帤搴︿笌鏁翠綋灏哄害</span>
             </div>
 
             <label class="control" for="irregularity">
               <div class="control-head">
-                <span>边缘不规则度</span>
+                <span>杈圭紭涓嶈鍒欏害</span>
                 <strong id="irregularityValue">4 / 10</strong>
               </div>
               <input id="irregularity" name="irregularity" type="range" min="0" max="10" step="1" value="4" />
@@ -186,7 +271,7 @@
 
             <label class="control" for="thickness">
               <div class="control-head">
-                <span>金属板厚度</span>
+                <span>閲戝睘鏉垮帤搴?/span>
                 <strong id="thicknessValue">6 mm</strong>
               </div>
               <input id="thickness" name="thickness" type="range" min="2" max="14" step="1" value="6" />
@@ -194,30 +279,44 @@
 
             <label class="control" for="radius">
               <div class="control-head">
-                <span>整体半径</span>
+                <span>鏁翠綋鍗婂緞</span>
                 <strong id="radiusValue">128 mm</strong>
               </div>
               <input id="radius" name="radius" type="range" min="88" max="180" step="1" value="128" />
             </label>
           </section>
 
-          <section class="control-group">
+          <section id="cutoutControlsGroup" class="control-group">
             <div class="group-head">
-              <p class="group-title">镂空参数</p>
-              <span class="group-note">保持结构完整的前提下，调节外壁镂空比例、尖锐度与位置</span>
+              <p class="group-title">闀傜┖鍙傛暟</p>
+              <span class="group-note">鍒嗗壊鍨嬩笌鍚屽舰鍐呴晜绌轰娇鐢ㄥ昂搴︺€侀攼搴﹀拰浣嶇疆锛涘弬鏁板寲灏忓瓟鏀逛负灏哄害銆佸瓟鍨嬫柟妗堝拰闀傜┖甯︿綅缃紝璁╁彉鍖栨洿鏄庣‘銆佹洿鍙帶</span>
             </div>
 
             <label class="control" for="cutoutScale">
               <div class="control-head">
-                <span>镂空比例</span>
+                <span>闀傜┖灏哄害</span>
                 <strong id="cutoutScaleValue">14%</strong>
               </div>
               <input id="cutoutScale" name="cutoutScale" type="range" min="0" max="32" step="1" value="14" />
             </label>
 
-            <label class="control" for="cutoutSharpness">
+            <div id="microHoleShapeGroup" class="control is-hidden">
               <div class="control-head">
-                <span>镂空尖锐度</span>
+                <span>瀛斿瀷鏂规</span>
+                <strong id="microHoleShapeValue">鍥涜竟褰?/strong>
+              </div>
+              <div class="mode-switch shape-switch" id="microHoleShapeSwitch">
+                <button class="shape-button is-active" data-hole-shape="quad" type="button">鍥涜竟褰?/button>
+                <button class="shape-button" data-hole-shape="triangle" type="button">涓夎褰?/button>
+                <button class="shape-button" data-hole-shape="pentagon" type="button">浜旇竟褰?/button>
+                <button class="shape-button" data-hole-shape="circle" type="button">鍦嗗舰</button>
+                <button class="shape-button" data-hole-shape="slot" type="button">闀挎潯鏀惧皠</button>
+              </div>
+            </div>
+
+            <label id="cutoutSharpnessControl" class="control" for="cutoutSharpness">
+              <div class="control-head">
+                <span>闀傜┖閿愬害</span>
                 <strong id="cutoutSharpnessValue">46%</strong>
               </div>
               <input id="cutoutSharpness" name="cutoutSharpness" type="range" min="24" max="76" step="1" value="46" />
@@ -225,7 +324,7 @@
 
             <label class="control" for="cutoutBand">
               <div class="control-head">
-                <span>镂空位置</span>
+                <span>闀傜┖甯︿綅缃?/span>
                 <strong id="cutoutBandValue">50%</strong>
               </div>
               <input id="cutoutBand" name="cutoutBand" type="range" min="36" max="64" step="1" value="50" />
@@ -234,21 +333,40 @@
         </section>
 
         <section class="panel action-panel">
+          <div class="summary-block">
+            <div class="panel-head panel-head-compact summary-head">
+              <p class="panel-label">鏂规鎽樿</p>
+              <button id="copyParamsButton" class="button button-inline" type="button">
+                澶嶅埗鍙傛暟 JSON
+              </button>
+            </div>
+            <div id="summaryChips" class="summary-chips"></div>
+            <p id="parameterSignature" class="parameter-signature"></p>
+          </div>
+
           <div class="button-row">
             <button id="generateButton" class="button button-secondary" type="button">
-              生成方案
+              鐢熸垚鏂规
             </button>
             <button id="exportButton" class="button" type="button">
-              导出方案
+              瀵煎嚭鏂规
+            </button>
+            <button id="exportModelButton" class="button" type="button">
+              瀵煎嚭 3D 妯″瀷
             </button>
             <button id="buyButton" class="button button-primary" type="button">
-              立即下单
+              绔嬪嵆涓嬪崟
+            </button>
+          </div>
+
+          <div class="utility-row">
+            <button id="resetButton" class="button button-ghost" type="button">
+              鎭㈠榛樿
             </button>
           </div>
 
           <p id="statusLine" class="status-line">
-            当前模型支持结构化镂空与 AI 参数驱动：会在保持果盘完整受力的前提下同步更新顶视图、三维和价格。
-          </p>
+            褰撳墠妯″瀷鏀寔缁撴瀯鍖栭晜绌轰笌 AI 鍙傛暟椹卞姩锛氫細鍦ㄤ繚鎸佹灉鐩樺畬鏁村彈鍔涚殑鍓嶆彁涓嬪悓姝ユ洿鏂伴《瑙嗗浘銆佷笁缁村拰浠锋牸銆?          </p>
         </section>
       </aside>
     </main>
@@ -260,6 +378,10 @@
         }
       }
     </script>
+    <script>
+  window.__AI_IMAGE_ENDPOINT__ =
+    "http://127.0.0.1:5000/generate-image";
+</script>
     <script src="./script.js"></script>
   </body>
 </html>

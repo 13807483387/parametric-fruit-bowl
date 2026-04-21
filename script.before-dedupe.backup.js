@@ -472,6 +472,75 @@ function restoreStateFromStorage() {
   }
 }
 
+function buildParameterSignature() {
+  return [
+    `MODE ${state.cutoutMode.toUpperCase()}`,
+    `POLY ${state.polygonSides}`,
+    `SEG ${state.segments}`,
+    `OPEN ${state.opening.toFixed(2)}x`,
+    `H ${state.height}`,
+    `TILT ${state.tilt}`,
+    `IRR ${state.irregularity}`,
+    `THK ${state.thickness}`,
+    `RAD ${state.radius}`,
+    `CUT ${state.cutoutScale}-${state.cutoutSharpness}-${state.cutoutBand}`,
+  ].join(" / ");
+}
+
+function getSummaryTokens() {
+  const tokens = [modeDefinitions[state.cutoutMode].label];
+
+  if (state.height <= 42) {
+    tokens.push("浅盘轮廓");
+  } else if (state.height >= 64) {
+    tokens.push("深口体量");
+  } else {
+    tokens.push("平衡碗体");
+  }
+
+  if (state.opening >= 1.16) {
+    tokens.push("外扩开口");
+  } else if (state.opening <= 0.94) {
+    tokens.push("内收轮廓");
+  } else {
+    tokens.push("开口适中");
+  }
+
+  if (state.irregularity >= 7) {
+    tokens.push("锋利边缘");
+  } else if (state.irregularity <= 3) {
+    tokens.push("规整折线");
+  } else {
+    tokens.push("折面起伏");
+  }
+
+  if (state.cutoutScale >= 20) {
+    tokens.push("高通透镂空");
+  } else if (state.cutoutScale <= 8) {
+    tokens.push("低镂空结构");
+  } else {
+    tokens.push("微孔镂空");
+  }
+
+  if (state.thickness >= 9) {
+    tokens.push("厚板金属");
+  } else if (state.thickness <= 4) {
+    tokens.push("轻薄板件");
+  } else {
+    tokens.push("中厚金属");
+  }
+
+  if (state.cutoutMode === "kaleido") {
+    tokens.push(`${state.polygonSides} 边万花筒`);
+  } else if (state.cutoutMode === "panel") {
+    tokens.push("同形面内开孔");
+  } else {
+    tokens.push("关系化渐变分布");
+  }
+
+  return tokens;
+}
+
 function updateSummaryPanel() {
   if (!elements.summaryChips || !elements.parameterSignature) {
     return;
@@ -666,6 +735,47 @@ function updateLabels() {
   elements.values.cutoutSharpness.textContent = `${state.cutoutSharpness}%`;
   elements.values.cutoutBand.textContent = `${state.cutoutBand}%`;
   elements.values.microHoleShape.textContent = microHoleShapeDefinitions[state.microHoleShape].label;
+}
+
+function getPricing() {
+  const modeComplexity =
+    state.cutoutMode === "kaleido" ? 1.22 : state.cutoutMode === "panel" ? 1.08 : 1;
+  const materialCost =
+    52 +
+    state.radius * 1.78 +
+    state.thickness * 10.2 +
+    state.height * 1.18 -
+    state.cutoutScale * 0.7;
+
+  const cuttingCost =
+    34 +
+    state.segments * 4.5 * modeComplexity +
+    state.irregularity * 8.1 +
+    state.cutoutScale * 2.1 +
+    state.cutoutSharpness * 0.8 +
+    state.polygonSides * (state.cutoutMode === "kaleido" ? 2.1 : 0.8);
+
+  const assemblyCost =
+    24 +
+    state.segments * 1.8 +
+    state.tilt * 0.92 +
+    state.thickness * 1.4;
+
+  const designCost =
+    48 +
+    state.segments * 1.15 +
+    state.irregularity * 4.8 +
+    state.cutoutBand * 0.5 +
+    state.cutoutSharpness * 0.45 +
+    (state.cutoutMode === "kaleido" ? 16 : state.cutoutMode === "panel" ? 8 : 0);
+
+  return {
+    materialCost,
+    cuttingCost,
+    assemblyCost,
+    designCost,
+    totalPrice: Math.round(materialCost + cuttingCost + assemblyCost + designCost),
+  };
 }
 
 function getPricing() {
@@ -2430,6 +2540,15 @@ function animateThree() {
 
 function updateMetrics() {
   const geometry = getGeometryData();
+  elements.assemblyValue.textContent = `${geometry.segments} 折面 / ${geometry.metrics.trianglePanels} 三角板`;
+  elements.diameterValue.textContent = `${geometry.metrics.openingDiameter} mm`;
+  elements.openingValue.textContent = `${geometry.metrics.bowlHeight} mm`;
+  elements.frameWidthValue.textContent =
+    `${geometry.metrics.footDiameter} mm / ${modeDefinitions[state.cutoutMode].label} ${geometry.metrics.cutoutRatio}%`;
+}
+
+function updateMetrics() {
+  const geometry = getGeometryData();
   elements.assemblyValue.textContent =
     state.cutoutMode === "kaleido"
       ? `${geometry.metrics.trianglePanels} 板片 / ${geometry.metrics.connectorCount} 连接件`
@@ -2618,6 +2737,110 @@ function buildProductDescription() {
   ].join("\n");
 }
 
+async function generateProductDescription() {
+  const content = buildProductDescription();
+  downloadTextFile(content, `${getCurrentModelSlug()}-产品说明.md`, "text/markdown;charset=utf-8");
+  try {
+    await copyTextToClipboard(content);
+    elements.statusLine.textContent = "已生成产品说明，并同步下载 Markdown 文件与复制到剪贴板。";
+  } catch (error) {
+    console.error(error);
+    elements.statusLine.textContent = "已生成产品说明并下载文件；复制到剪贴板时失败。";
+  }
+}
+
+function downloadProductHeroImage() {
+  if (!threeState.ready || !threeState.renderer) {
+    elements.statusLine.textContent = "三维预览尚未完成初始化，暂时无法生成产品效果图。";
+    return;
+  }
+
+  threeState.renderer.render(threeState.scene, threeState.camera);
+  const dataUrl = threeState.renderer.domElement.toDataURL("image/png");
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = `${getCurrentModelSlug()}-效果图.png`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function buildPresentationTopViewSvg(size = 960) {
+  const geometry = getGeometryData();
+  const padding = size * 0.12;
+  const center = size / 2;
+  const allPoints = geometry.panels
+    .flatMap((panel) => panel.outer3d)
+    .concat(geometry.baseCapPoints);
+  const maxRadius =
+    Math.max(...allPoints.map((point) => Math.max(Math.abs(point.x), Math.abs(point.z))), 1) || 1;
+  const scale = (size / 2 - padding) / maxRadius;
+  const project = (point) => ({
+    x: center + point.x * scale,
+    y: center + point.z * scale,
+  });
+
+  const plateMarkup = [];
+  const seamMarkup = [];
+  const holeMarkup = [];
+  const baseCap2d = geometry.baseCapPoints.map(project);
+
+  geometry.panels.forEach((panel) => {
+    const outer2d = panel.outer3d.map(project);
+    const hole2d = panel.holes3d.map((hole) => hole.map(project));
+    const compoundPath = [polygonPath(outer2d), ...hole2d.map((loop) => polygonPath(loop))].join(" ");
+
+    plateMarkup.push(`
+      <path
+        d="${compoundPath}"
+        fill="${panel.type === "connector" ? "rgba(198,58,50,0.05)" : "rgba(0,0,0,0.02)"}"
+        fill-rule="evenodd"
+        stroke="#121212"
+        stroke-width="${panel.type === "outer" ? 2.2 : 1.8}"
+        vector-effect="non-scaling-stroke"
+      />
+    `);
+
+    seamMarkup.push(`
+      <path
+        d="${polygonPath(outer2d)}"
+        fill="none"
+        stroke="#1c1c1c"
+        stroke-width="1.2"
+        vector-effect="non-scaling-stroke"
+      />
+    `);
+
+    hole2d.forEach((loop) => {
+      holeMarkup.push(`
+        <path
+          d="${polygonPath(loop)}"
+          fill="none"
+          stroke="#c63a32"
+          stroke-width="1.5"
+          vector-effect="non-scaling-stroke"
+        />
+      `);
+    });
+  });
+
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}">
+      <rect width="${size}" height="${size}" fill="#f7f2e9" />
+      <g stroke="#ece4d5" stroke-width="1">
+        ${Array.from({ length: 20 }, (_, index) => {
+          const position = (index / 19) * size;
+          return `<line x1="${position}" y1="0" x2="${position}" y2="${size}" /><line x1="0" y1="${position}" x2="${size}" y2="${position}" />`;
+        }).join("")}
+      </g>
+      <path d="${polygonPath(baseCap2d)}" fill="rgba(0,0,0,0.04)" stroke="#141414" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+      <g>${plateMarkup.join("")}</g>
+      <g>${seamMarkup.join("")}</g>
+      <g>${holeMarkup.join("")}</g>
+    </svg>
+  `;
+}
+
 function loadImageFromSource(source) {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -2744,6 +2967,325 @@ function drawInfoBlock(ctx, x, y, width, height, label, value, accent = false) {
   ctx.fillText(value, x + 24, y + 82);
   ctx.restore();
 }
+
+function getProductCardDetailLabel() {
+  if (state.cutoutMode === "micro") {
+    return `孔型 ${microHoleShapeDefinitions[state.microHoleShape].label}`;
+  }
+  if (state.cutoutMode === "panel") {
+    return `层级 ${state.panelLayers} 层`;
+  }
+  return `拼接 ${state.polygonSides} 边`;
+}
+
+function captureThreeModelDataUrl({ width = 1480, height = 1120, transparent = false } = {}) {
+  if (!threeState.ready || !THREE) {
+    throw new Error("three.js 三维预览尚未就绪。");
+  }
+
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: transparent,
+    preserveDrawingBuffer: true,
+  });
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.08;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const previousBackground = threeState.scene.background;
+  const previousGroundVisible = threeState.ground ? threeState.ground.visible : null;
+  if (transparent) {
+    threeState.scene.background = null;
+    if (threeState.ground) {
+      threeState.ground.visible = false;
+    }
+  }
+
+  renderer.render(threeState.scene, threeState.camera);
+  const dataUrl = renderer.domElement.toDataURL("image/png");
+
+  threeState.scene.background = previousBackground;
+  if (threeState.ground && previousGroundVisible !== null) {
+    threeState.ground.visible = previousGroundVisible;
+  }
+
+  renderer.dispose();
+  if (typeof renderer.forceContextLoss === "function") {
+    renderer.forceContextLoss();
+  }
+  return dataUrl;
+}
+
+async function generateProductDescription() {
+  if (!threeState.ready) {
+    elements.statusLine.textContent = "三维预览尚未完成初始化，暂时无法生成产品标签页 PNG。";
+    return;
+  }
+
+  const geometry = getGeometryData();
+  const pricing = getPricing();
+  const metrics = pricing.manufacturingMetrics;
+
+  try {
+    const [topViewImage, heroImage] = await Promise.all([
+      loadImageFromSource(svgToDataUrl(buildPresentationTopViewSvg(980))),
+      loadImageFromSource(captureThreeModelDataUrl({ transparent: true })),
+    ]);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1800;
+    canvas.height = 2400;
+    const ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = "#0f0f0d";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const cardX = 100;
+    const cardY = 72;
+    const cardW = 1600;
+    const cardH = 2250;
+    const holeX = cardX + cardW - 175;
+    const holeY = cardY + 118;
+    const bgGradient = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
+    bgGradient.addColorStop(0, "#f6f0e6");
+    bgGradient.addColorStop(0.55, "#f2eadf");
+    bgGradient.addColorStop(1, "#ede2d4");
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.28)";
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetY = 24;
+    drawTagCardPath(ctx, cardX, cardY, cardW, cardH);
+    ctx.fillStyle = bgGradient;
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    drawTagCardPath(ctx, cardX, cardY, cardW, cardH);
+    ctx.clip();
+
+    const leftStripe = ctx.createLinearGradient(cardX, cardY, cardX + 90, cardY);
+    leftStripe.addColorStop(0, "rgba(198,58,50,0.12)");
+    leftStripe.addColorStop(1, "rgba(198,58,50,0)");
+    ctx.fillStyle = leftStripe;
+    ctx.fillRect(cardX, cardY, 130, cardH);
+
+    ctx.fillStyle = "rgba(0,0,0,0.04)";
+    ctx.font = '800 240px "Arial Black","Microsoft YaHei",sans-serif';
+    ctx.fillText("304", cardX + 980, cardY + 1970);
+
+    ctx.fillStyle = "#c63a32";
+    ctx.font = '600 24px "IBM Plex Mono","Consolas","Microsoft YaHei",sans-serif';
+    ctx.fillText("PRODUCT TAG / PARAMETRIC METAL BOWL", cardX + 160, cardY + 120);
+
+    ctx.fillStyle = "#111111";
+    ctx.font = '900 118px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("参数化", cardX + 160, cardY + 250);
+    ctx.fillText("金属果盘", cardX + 160, cardY + 372);
+
+    ctx.fillStyle = "#6c665f";
+    ctx.font = '500 30px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("304 镜面不锈钢 / 前卫折面原型 / 可定制参数", cardX + 164, cardY + 430);
+
+    ctx.fillStyle = "#c63a32";
+    ctx.font = '700 28px "IBM Plex Mono","Consolas","Microsoft YaHei",sans-serif';
+    ctx.fillText("建议售价", cardX + 1080, cardY + 128);
+    ctx.fillStyle = "#111111";
+    ctx.font = '900 136px "Arial Black","Microsoft YaHei",sans-serif';
+    ctx.fillText(formatRmb(pricing.totalPrice), cardX + 1068, cardY + 270);
+    ctx.fillStyle = "#6b645c";
+    ctx.font = '500 26px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText(`成本 ${formatRmb(pricing.costSubtotal)} / ${modeDefinitions[state.cutoutMode].label}`, cardX + 1072, cardY + 316);
+
+    drawInfoBlock(ctx, cardX + 160, cardY + 468, 300, 118, "方案模式", modeDefinitions[state.cutoutMode].label, true);
+    drawInfoBlock(ctx, cardX + 482, cardY + 468, 260, 118, "细节逻辑", getProductCardDetailLabel());
+    drawInfoBlock(ctx, cardX + 764, cardY + 468, 236, 118, "折面数量", `${state.segments}`);
+    drawInfoBlock(ctx, cardX + 1022, cardY + 468, 380, 118, "厚度 / 半径", `${geometry.plateThickness.toFixed(1)} mm / ${state.radius} mm`);
+
+    const topBoxX = cardX + 160;
+    const topBoxY = cardY + 650;
+    const topBoxW = 620;
+    const topBoxH = 900;
+    drawRoundedRectPath(ctx, topBoxX, topBoxY, topBoxW, topBoxH, 36);
+    ctx.fillStyle = "rgba(255,255,255,0.48)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    drawTechGrid(ctx, topBoxX, topBoxY, topBoxW, topBoxH, 24, 96);
+    ctx.fillStyle = "#c63a32";
+    ctx.font = '600 22px "IBM Plex Mono","Consolas","Microsoft YaHei",sans-serif';
+    ctx.fillText("LINEAR TOP VIEW", topBoxX + 28, topBoxY + 42);
+    drawImageContain(ctx, topViewImage, topBoxX + 42, topBoxY + 86, topBoxW - 84, topBoxH - 168);
+    ctx.fillStyle = "#6b645c";
+    ctx.font = '500 24px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("线性顶视图 / 结构线 / 开孔逻辑", topBoxX + 28, topBoxY + topBoxH - 36);
+
+    const heroX = cardX + 850;
+    const heroY = cardY + 620;
+    const heroW = 650;
+    const heroH = 1010;
+    const heroBg = ctx.createRadialGradient(
+      heroX + heroW * 0.5,
+      heroY + heroH * 0.4,
+      heroW * 0.08,
+      heroX + heroW * 0.5,
+      heroY + heroH * 0.44,
+      heroW * 0.62
+    );
+    heroBg.addColorStop(0, "rgba(198,58,50,0.16)");
+    heroBg.addColorStop(1, "rgba(198,58,50,0)");
+    ctx.fillStyle = heroBg;
+    ctx.fillRect(heroX - 30, heroY - 30, heroW + 60, heroH + 60);
+
+    ctx.fillStyle = "rgba(0,0,0,0.08)";
+    ctx.beginPath();
+    ctx.ellipse(heroX + heroW * 0.5, heroY + heroH * 0.82, heroW * 0.28, 42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    drawImageContain(ctx, heroImage, heroX, heroY, heroW, heroH);
+
+    ctx.strokeStyle = "rgba(198,58,50,0.4)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(heroX + 36, heroY + heroH - 24);
+    ctx.lineTo(heroX + 210, heroY + heroH - 24);
+    ctx.stroke();
+
+    const copyX = cardX + 164;
+    const copyY = cardY + 1610;
+    const copyWidth = 520;
+    ctx.fillStyle = "#111111";
+    ctx.font = '700 46px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("产品参数标签页", copyX, copyY);
+    ctx.fillStyle = "#6a645d";
+    ctx.font = '500 28px "Microsoft YaHei","PingFang SC",sans-serif';
+    const copyLines = wrapCanvasText(
+      ctx,
+      "这是一件以折面板件、结构切割与镜面不锈钢为核心语言的参数化果盘原型。标签页同步呈现线性顶视图、三维效果图与关键制造参数，适合用于展示、汇报与打样沟通。",
+      copyWidth
+    );
+    copyLines.slice(0, 5).forEach((line, index) => {
+      ctx.fillText(line, copyX, copyY + 68 + index * 40);
+    });
+
+    const specs = [
+      ["材质", "304 镜面不锈钢"],
+      ["折面数量", `${state.segments}`],
+      ["开口比例", `${state.opening.toFixed(2)}x`],
+      ["整体高度", `${geometry.metrics.bowlHeight} mm`],
+      ["整体半径", `${state.radius} mm`],
+      ["板材厚度", `${geometry.plateThickness.toFixed(1)} mm`],
+      ["轮廓边数", `${state.polygonSides} 边`],
+      ["制造成本", formatRmb(pricing.costSubtotal)],
+      ["切割长度", `${metrics.cutLengthM.toFixed(2)} m`],
+      ["采购重量", `${metrics.purchasedMassKg.toFixed(2)} kg`],
+    ];
+
+    const specX = cardX + 760;
+    const specY = cardY + 1660;
+    const specW = 660;
+    const specGap = 18;
+    const specCellW = (specW - specGap) / 2;
+    const specCellH = 112;
+    specs.forEach(([label, value], index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      drawInfoBlock(
+        ctx,
+        specX + col * (specCellW + specGap),
+        specY + row * (specCellH + 16),
+        specCellW,
+        specCellH,
+        label,
+        value,
+        label === "制造成本"
+      );
+    });
+
+    ctx.save();
+    ctx.translate(cardX + 54, cardY + cardH - 120);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = "#c63a32";
+    ctx.font = '700 24px "IBM Plex Mono","Consolas","Microsoft YaHei",sans-serif';
+    ctx.fillText("PARAMETRIC BOWL / FRONTIER PRODUCT CARD", 0, 0);
+    ctx.restore();
+
+    ctx.strokeStyle = "#171717";
+    ctx.lineWidth = 1.6;
+    drawTagCardPath(ctx, cardX, cardY, cardW, cardH);
+    ctx.stroke();
+    ctx.fillStyle = "#0f0f0d";
+    ctx.beginPath();
+    ctx.arc(holeX, holeY, 34, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.22)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(holeX, holeY, 34, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) {
+      throw new Error("PNG 生成失败。");
+    }
+
+    downloadBlob(blob, `${getCurrentModelSlug()}-产品标签页.png`);
+    elements.statusLine.textContent = "已生成高分辨率产品标签页 PNG，包含线性顶视图、三维效果图、价格与关键参数。";
+  } catch (error) {
+    console.error(error);
+    elements.statusLine.textContent = "产品标签页 PNG 生成失败，请稍后重试。";
+  }
+}
+
+function downloadProductHeroImage() {
+  if (!threeState.ready || !threeState.renderer) {
+    elements.statusLine.textContent = "三维预览尚未完成初始化，暂时无法生成产品效果图。";
+    return;
+  }
+
+  try {
+    const dataUrl = captureThreeModelDataUrl({ transparent: true });
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = `${getCurrentModelSlug()}-效果图.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.error(error);
+    elements.statusLine.textContent = "产品效果图导出失败，请确认三维预览已经加载完成。";
+  }
+}
+
+const productCardModeLabels = Object.freeze({
+  kaleido: "分割型",
+  panel: "镂空型",
+  micro: "打孔型",
+});
+
+const productCardHoleLabels = Object.freeze({
+  triangle: "三角孔",
+  quad: "四边孔",
+  pentagon: "五边孔",
+  circle: "圆孔",
+  slot: "放射长条孔",
+});
+
+Object.keys(productCardModeLabels).forEach((key) => {
+  if (modeDefinitions[key]) {
+    modeDefinitions[key].label = productCardModeLabels[key];
+  }
+});
+
+Object.keys(productCardHoleLabels).forEach((key) => {
+  if (microHoleShapeDefinitions[key]) {
+    microHoleShapeDefinitions[key].label = productCardHoleLabels[key];
+  }
+});
 
 function getProductCardModeLabel() {
   return productCardModeLabels[state.cutoutMode] || modeDefinitions[state.cutoutMode]?.label || "参数模式";
@@ -2872,6 +3414,93 @@ function drawImageCover(ctx, image, x, y, width, height, focusX = 0.5, focusY = 
   ctx.restore();
 }
 
+function buildCaptureCamera(width, height, preset = "hero") {
+  const fov = preset === "card" ? 29 : preset === "hero" ? 25 : 28;
+  const camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 4000);
+  const bounds = new THREE.Box3().setFromObject(threeState.bowlGroup);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  bounds.getSize(size);
+  bounds.getCenter(center);
+  const maxDim = Math.max(size.x, size.y, size.z, 180);
+
+  if (preset === "card") {
+    camera.position.set(
+      center.x + maxDim * 0.62,
+      center.y + maxDim * 0.86,
+      center.z + maxDim * 0.84
+    );
+    camera.lookAt(center.x, center.y + size.y * 0.06, center.z);
+  } else if (preset === "hero") {
+    camera.position.set(
+      center.x + maxDim * 0.88,
+      center.y + maxDim * 0.62,
+      center.z + maxDim * 1.04
+    );
+    camera.lookAt(center.x, center.y + size.y * 0.08, center.z);
+  } else {
+    camera.position.set(
+      center.x + maxDim * 1.2,
+      center.y + maxDim * 0.84,
+      center.z + maxDim * 1.28
+    );
+    camera.lookAt(center.x, center.y + size.y * 0.12, center.z);
+  }
+
+  camera.updateProjectionMatrix();
+  return camera;
+}
+
+function captureThreeModelDataUrl({
+  width = 1480,
+  height = 1120,
+  transparent = false,
+  cameraPreset = null,
+  exposure = 1.3,
+} = {}) {
+  if (!threeState.ready || !THREE) {
+    throw new Error("three.js 三维预览尚未就绪。");
+  }
+
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: transparent,
+    preserveDrawingBuffer: true,
+  });
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = exposure;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const previousBackground = threeState.scene.background;
+  const previousGroundVisible = threeState.ground ? threeState.ground.visible : null;
+  const renderCamera = cameraPreset ? buildCaptureCamera(width, height, cameraPreset) : threeState.camera;
+
+  if (transparent) {
+    threeState.scene.background = null;
+    if (threeState.ground) {
+      threeState.ground.visible = false;
+    }
+  }
+
+  renderer.render(threeState.scene, renderCamera);
+  const dataUrl = renderer.domElement.toDataURL("image/png");
+
+  threeState.scene.background = previousBackground;
+  if (threeState.ground && previousGroundVisible !== null) {
+    threeState.ground.visible = previousGroundVisible;
+  }
+
+  renderer.dispose();
+  if (typeof renderer.forceContextLoss === "function") {
+    renderer.forceContextLoss();
+  }
+  return dataUrl;
+}
+
 function drawSpecCell(ctx, x, y, width, height, label, value, accent = false) {
   ctx.save();
   drawRoundedRectPath(ctx, x, y, width, height, 20);
@@ -2906,6 +3535,239 @@ function drawGlossBand(ctx, x, y, width, height, angleDegrees, opacity = 0.4) {
   ctx.restore();
 }
 
+async function generateProductDescription() {
+  if (!threeState.ready) {
+    elements.statusLine.textContent = "三维预览尚未完成初始化，暂时无法生成产品标签页 PNG。";
+    return;
+  }
+
+  const geometry = getGeometryData();
+  const pricing = getPricing();
+  const modeLabel = getProductCardModeLabel();
+  const detailLabel = getProductCardDetailLabel();
+
+  try {
+    const [topViewImage, heroImage] = await Promise.all([
+      loadImageFromSource(svgToDataUrl(buildPresentationTopViewSvg(1440))),
+      loadImageFromSource(
+        captureThreeModelDataUrl({
+          width: 2600,
+          height: 1900,
+          transparent: true,
+          cameraPreset: "card",
+          exposure: 1.54,
+        })
+      ),
+    ]);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1800;
+    canvas.height = 2400;
+    const ctx = canvas.getContext("2d");
+    const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    bgGradient.addColorStop(0, "#f8f4ee");
+    bgGradient.addColorStop(0.48, "#f5efe5");
+    bgGradient.addColorStop(1, "#efe4d6");
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "rgba(255,255,255,0.42)";
+    ctx.fillRect(0, 0, canvas.width, 420);
+
+    const warmGlow = ctx.createRadialGradient(1270, 760, 30, 1270, 760, 700);
+    warmGlow.addColorStop(0, "rgba(198,58,50,0.12)");
+    warmGlow.addColorStop(1, "rgba(198,58,50,0)");
+    ctx.fillStyle = warmGlow;
+    ctx.fillRect(740, 420, 1000, 1200);
+
+    const silverGlow = ctx.createLinearGradient(900, 520, 1610, 1500);
+    silverGlow.addColorStop(0, "rgba(255,255,255,0.86)");
+    silverGlow.addColorStop(0.34, "rgba(255,255,255,0.08)");
+    silverGlow.addColorStop(0.7, "rgba(255,255,255,0.3)");
+    silverGlow.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = silverGlow;
+    ctx.fillRect(900, 460, 720, 1000);
+
+    ctx.fillStyle = "#c63a32";
+    ctx.font = '600 24px "IBM Plex Mono","Consolas","Microsoft YaHei",sans-serif';
+    ctx.fillText("PRODUCT CARD / PARAMETRIC STAINLESS STEEL BOWL", 82, 92);
+
+    ctx.strokeStyle = "rgba(198,58,50,0.38)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(82, 120);
+    ctx.lineTo(366, 120);
+    ctx.stroke();
+
+    ctx.fillStyle = "#111111";
+    ctx.font = '900 122px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("参数化", 78, 210);
+    ctx.fillText("金属果盘", 78, 338);
+
+    ctx.fillStyle = "#6e675f";
+    ctx.font = '500 33px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("304 镜面不锈钢 / 前卫折面原型 / 可定制参数", 82, 404);
+
+    ctx.fillStyle = "#c63a32";
+    ctx.font = '700 30px "IBM Plex Mono","Consolas","Microsoft YaHei",sans-serif';
+    ctx.fillText("建议售价", 1230, 102);
+    ctx.fillStyle = "#111111";
+    ctx.font = '900 148px "Arial Black","Microsoft YaHei",sans-serif';
+    ctx.fillText(formatRmb(pricing.totalPrice), 1186, 244);
+    ctx.fillStyle = "#6e675f";
+    ctx.font = '500 27px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("镜面不锈钢 / 参数化折面视觉方案", 1188, 294);
+
+    drawInfoBlock(ctx, 78, 460, 312, 116, "方案模式", modeLabel, true);
+    drawInfoBlock(ctx, 414, 460, 328, 116, "细节逻辑", detailLabel);
+    drawInfoBlock(ctx, 766, 460, 246, 116, "折面数量", `${state.segments}`);
+    drawInfoBlock(ctx, 1036, 460, 412, 116, "厚度 / 半径", `${geometry.plateThickness.toFixed(1)} mm / ${state.radius} mm`);
+
+    ctx.fillStyle = "#151515";
+    ctx.font = '800 54px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("产品参数标签页", 78, 676);
+    ctx.fillStyle = "#6a645d";
+    ctx.font = '500 30px "Microsoft YaHei","PingFang SC",sans-serif';
+    const copyLines = wrapCanvasText(
+      ctx,
+      "以镜面不锈钢与参数化折面语言构成的果盘原型。通过线性顶视图与三维渲染的并置拼贴，直接呈现结构逻辑、孔洞秩序与产品气质。",
+      640
+    );
+    copyLines.slice(0, 3).forEach((line, index) => {
+      ctx.fillText(line, 78, 744 + index * 44);
+    });
+
+    const collageY = 840;
+    const collageH = 1120;
+    const gutter = 34;
+    const leftX = 78;
+    const panelW = 804;
+    const rightX = leftX + panelW + gutter;
+
+    ctx.fillStyle = "rgba(255,255,255,0.36)";
+    ctx.fillRect(leftX, collageY, panelW, collageH);
+    drawTechGrid(ctx, leftX, collageY, panelW, collageH, 24, 120);
+
+    ctx.fillStyle = "#c63a32";
+    ctx.font = '600 23px "IBM Plex Mono","Consolas","Microsoft YaHei",sans-serif';
+    ctx.fillText("LINEAR TOP VIEW / GEOMETRY SYSTEM", leftX, collageY - 18);
+    drawImageCover(ctx, topViewImage, leftX, collageY, panelW, collageH, 0.5, 0.53, 1.18);
+
+    const renderBg = ctx.createLinearGradient(rightX, collageY, rightX + panelW, collageY + collageH);
+    renderBg.addColorStop(0, "rgba(255,255,255,0.82)");
+    renderBg.addColorStop(0.4, "rgba(255,255,255,0.14)");
+    renderBg.addColorStop(1, "rgba(255,255,255,0.58)");
+    ctx.fillStyle = renderBg;
+    ctx.fillRect(rightX, collageY, panelW, collageH);
+
+    ctx.fillStyle = "#c63a32";
+    ctx.font = '600 23px "IBM Plex Mono","Consolas","Microsoft YaHei",sans-serif';
+    ctx.fillText("CMF RENDER / METALLIC SURFACE STUDY", rightX, collageY - 18);
+
+    ctx.save();
+    ctx.filter = "blur(28px)";
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.beginPath();
+    ctx.ellipse(rightX + panelW * 0.52, collageY + collageH * 0.34, panelW * 0.24, 120, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.filter = "brightness(1.28) contrast(1.06) saturate(0.86)";
+    drawImageCover(ctx, heroImage, rightX, collageY, panelW, collageH, 0.56, 0.52, 1.12);
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rightX, collageY, panelW, collageH);
+    ctx.clip();
+    drawGlossBand(ctx, rightX - 40, collageY + 110, panelW + 120, 240, -16, 0.82);
+    drawGlossBand(ctx, rightX - 30, collageY + 420, panelW + 100, 200, 9, 0.46);
+    drawGlossBand(ctx, rightX - 60, collageY + 770, panelW + 150, 220, -22, 0.34);
+    ctx.restore();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(900, collageY + 48);
+    ctx.lineTo(900, collageY + collageH - 48);
+    ctx.stroke();
+
+    const specs = [
+      ["材质", "304 镜面不锈钢"],
+      ["方案模式", modeLabel],
+      ["细节逻辑", detailLabel],
+      ["折面数量", `${state.segments}`],
+      ["开口比例", `${state.opening.toFixed(2)}x`],
+      ["整体高度", `${geometry.metrics.bowlHeight} mm`],
+      ["整体半径", `${state.radius} mm`],
+      ["板材厚度", `${geometry.plateThickness.toFixed(1)} mm`],
+      ["轮廓边数", `${state.polygonSides} 边`],
+      ["表面气质", "高光镜面金属"],
+    ];
+
+    const specStartY = 2026;
+    const specGap = 18;
+    const specCellW = 340;
+    const specCellH = 108;
+    specs.forEach(([label, value], index) => {
+      const col = index % 5;
+      const row = Math.floor(index / 5);
+      drawSpecCell(
+        ctx,
+        78 + col * (specCellW + specGap),
+        specStartY + row * (specCellH + 18),
+        specCellW,
+        specCellH,
+        label,
+        value,
+        index === 0
+      );
+    });
+
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(44, 44, canvas.width - 88, canvas.height - 88);
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) {
+      throw new Error("PNG 生成失败。");
+    }
+
+    downloadBlob(blob, `${getCurrentModelSlug()}-产品标签页.png`);
+    elements.statusLine.textContent = "已生成重排版后的产品标签页 PNG：顶视图与 3D 渲染各占半幅，并强化了金属高光与整体可读性。";
+  } catch (error) {
+    console.error(error);
+    elements.statusLine.textContent = "产品标签页 PNG 生成失败，请稍后重试。";
+  }
+}
+
+function downloadProductHeroImage() {
+  if (!threeState.ready || !threeState.renderer) {
+    elements.statusLine.textContent = "三维预览尚未完成初始化，暂时无法生成产品效果图。";
+    return;
+  }
+
+  try {
+    const dataUrl = captureThreeModelDataUrl({
+      width: 2200,
+      height: 1600,
+      transparent: true,
+      cameraPreset: "card",
+      exposure: 1.54,
+    });
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = `${getCurrentModelSlug()}-效果图.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.error(error);
+    elements.statusLine.textContent = "产品效果图导出失败，请确认三维预览已经加载完成。";
+  }
+}
+
 function drawImageHalf(ctx, image, x, y, width, height, side, focusX = 0.5, focusY = 0.5, zoom = 1, filter = "none") {
   ctx.save();
   ctx.beginPath();
@@ -2918,6 +3780,384 @@ function drawImageHalf(ctx, image, x, y, width, height, side, focusX = 0.5, focu
   ctx.filter = filter;
   drawImageCover(ctx, image, x, y, width, height, focusX, focusY, zoom);
   ctx.restore();
+}
+
+function buildCaptureCamera(width, height, preset = "hero") {
+  const fov = preset === "card" ? 29 : preset === "hero" ? 25 : 28;
+  const camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 4000);
+  const bounds = new THREE.Box3().setFromObject(threeState.bowlGroup);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  bounds.getSize(size);
+  bounds.getCenter(center);
+  const maxDim = Math.max(size.x, size.y, size.z, 180);
+
+  if (preset === "card") {
+    camera.position.set(
+      center.x + maxDim * 0.54,
+      center.y + maxDim * 1.04,
+      center.z + maxDim * 0.72
+    );
+    camera.lookAt(center.x, center.y + size.y * 0.04, center.z);
+  } else if (preset === "hero") {
+    camera.position.set(
+      center.x + maxDim * 0.88,
+      center.y + maxDim * 0.62,
+      center.z + maxDim * 1.04
+    );
+    camera.lookAt(center.x, center.y + size.y * 0.08, center.z);
+  } else {
+    camera.position.set(
+      center.x + maxDim * 1.2,
+      center.y + maxDim * 0.84,
+      center.z + maxDim * 1.28
+    );
+    camera.lookAt(center.x, center.y + size.y * 0.12, center.z);
+  }
+
+  camera.updateProjectionMatrix();
+  return camera;
+}
+
+function captureThreeModelDataUrl({
+  width = 1480,
+  height = 1120,
+  transparent = false,
+  cameraPreset = null,
+  exposure = 1.3,
+  highlightBoost = false,
+} = {}) {
+  if (!threeState.ready || !THREE) {
+    throw new Error("three.js 三维预览尚未就绪。");
+  }
+
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: transparent,
+    preserveDrawingBuffer: true,
+  });
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = exposure;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const previousBackground = threeState.scene.background;
+  const previousGroundVisible = threeState.ground ? threeState.ground.visible : null;
+  const renderCamera = cameraPreset ? buildCaptureCamera(width, height, cameraPreset) : threeState.camera;
+  const boostedLights = [];
+  const boostedMaterials = [];
+
+  if (transparent) {
+    threeState.scene.background = null;
+    if (threeState.ground) {
+      threeState.ground.visible = false;
+    }
+  }
+
+  if (highlightBoost) {
+    threeState.scene.traverse((node) => {
+      if (node?.isLight) {
+        boostedLights.push({ node, intensity: node.intensity });
+        node.intensity *= node.isAmbientLight ? 1.35 : 1.62;
+      }
+    });
+
+    const seenMaterials = new Set();
+    threeState.bowlGroup.traverse((node) => {
+      if (!node?.isMesh || !node.material) {
+        return;
+      }
+
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      materials.forEach((material) => {
+        if (!material?.isMeshStandardMaterial || seenMaterials.has(material)) {
+          return;
+        }
+
+        seenMaterials.add(material);
+        boostedMaterials.push({
+          material,
+          roughness: material.roughness,
+          metalness: material.metalness,
+          envMapIntensity: material.envMapIntensity,
+          color: material.color.getHex(),
+        });
+        material.roughness = Math.max(0.06, material.roughness * 0.58);
+        material.metalness = Math.max(0.92, material.metalness);
+        material.envMapIntensity *= 2.15;
+        material.color.lerp(new THREE.Color("#868686"), 0.18);
+        material.needsUpdate = true;
+      });
+    });
+  }
+
+  renderer.render(threeState.scene, renderCamera);
+  const dataUrl = renderer.domElement.toDataURL("image/png");
+
+  threeState.scene.background = previousBackground;
+  if (threeState.ground && previousGroundVisible !== null) {
+    threeState.ground.visible = previousGroundVisible;
+  }
+  boostedLights.forEach(({ node, intensity }) => {
+    node.intensity = intensity;
+  });
+  boostedMaterials.forEach(({ material, roughness, metalness, envMapIntensity, color }) => {
+    material.roughness = roughness;
+    material.metalness = metalness;
+    material.envMapIntensity = envMapIntensity;
+    material.color.setHex(color);
+    material.needsUpdate = true;
+  });
+
+  renderer.dispose();
+  if (typeof renderer.forceContextLoss === "function") {
+    renderer.forceContextLoss();
+  }
+  return dataUrl;
+}
+
+async function generateProductDescription() {
+  if (!threeState.ready) {
+    elements.statusLine.textContent = "三维预览尚未完成初始化，暂时无法生成产品标签页 PNG。";
+    return;
+  }
+
+  const geometry = getGeometryData();
+  const pricing = getPricing();
+  const modeLabel = getProductCardModeLabel();
+  const detailLabel = getProductCardDetailLabel();
+
+  try {
+    const [topViewImage, heroImage] = await Promise.all([
+      loadImageFromSource(svgToDataUrl(buildPresentationTopViewSvg(1440))),
+      loadImageFromSource(
+        captureThreeModelDataUrl({
+          width: 2600,
+          height: 1900,
+          transparent: true,
+          cameraPreset: "card",
+          exposure: 1.76,
+          highlightBoost: true,
+        })
+      ),
+    ]);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1800;
+    canvas.height = 2400;
+    const ctx = canvas.getContext("2d");
+
+    const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    bgGradient.addColorStop(0, "#f8f4ee");
+    bgGradient.addColorStop(0.48, "#f5efe5");
+    bgGradient.addColorStop(1, "#efe4d6");
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "rgba(255,255,255,0.46)";
+    ctx.fillRect(0, 0, canvas.width, 430);
+
+    const warmGlow = ctx.createRadialGradient(1270, 840, 30, 1270, 840, 760);
+    warmGlow.addColorStop(0, "rgba(198,58,50,0.12)");
+    warmGlow.addColorStop(1, "rgba(198,58,50,0)");
+    ctx.fillStyle = warmGlow;
+    ctx.fillRect(700, 520, 1040, 1220);
+
+    const silverGlow = ctx.createLinearGradient(860, 580, 1620, 1540);
+    silverGlow.addColorStop(0, "rgba(255,255,255,0.86)");
+    silverGlow.addColorStop(0.34, "rgba(255,255,255,0.08)");
+    silverGlow.addColorStop(0.7, "rgba(255,255,255,0.3)");
+    silverGlow.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = silverGlow;
+    ctx.fillRect(860, 600, 780, 980);
+
+    ctx.fillStyle = "#c63a32";
+    ctx.font = '600 24px "IBM Plex Mono","Consolas","Microsoft YaHei",sans-serif';
+    ctx.fillText("PRODUCT CARD / PARAMETRIC STAINLESS STEEL BOWL", 82, 92);
+
+    ctx.strokeStyle = "rgba(198,58,50,0.38)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(82, 120);
+    ctx.lineTo(366, 120);
+    ctx.stroke();
+
+    ctx.fillStyle = "#111111";
+    ctx.font = '900 122px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("参数化", 78, 210);
+    ctx.fillText("金属果盘", 78, 338);
+
+    ctx.fillStyle = "#6e675f";
+    ctx.font = '500 33px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("304 镜面不锈钢 / 前卫折面原型 / 可定制参数", 82, 404);
+
+    ctx.fillStyle = "#c63a32";
+    ctx.font = '700 30px "IBM Plex Mono","Consolas","Microsoft YaHei",sans-serif';
+    ctx.fillText("建议售价", 1230, 102);
+    ctx.fillStyle = "#111111";
+    ctx.font = '900 148px "Arial Black","Microsoft YaHei",sans-serif';
+    ctx.fillText(formatRmb(pricing.totalPrice), 1186, 244);
+    ctx.fillStyle = "#6e675f";
+    ctx.font = '500 27px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("镜面不锈钢 / 参数化折面视觉方案", 1188, 294);
+
+    drawInfoBlock(ctx, 78, 448, 312, 108, "方案模式", modeLabel, true);
+    drawInfoBlock(ctx, 414, 448, 328, 108, "细节逻辑", detailLabel);
+    drawInfoBlock(ctx, 766, 448, 246, 108, "折面数量", `${state.segments}`);
+    drawInfoBlock(ctx, 1036, 448, 412, 108, "厚度 / 半径", `${geometry.plateThickness.toFixed(1)} mm / ${state.radius} mm`);
+
+    ctx.fillStyle = "#151515";
+    ctx.font = '800 54px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("产品参数标签页", 78, 650);
+    ctx.fillStyle = "#6a645d";
+    ctx.font = '500 28px "Microsoft YaHei","PingFang SC",sans-serif';
+    const copyLines = wrapCanvasText(
+      ctx,
+      "以镜面不锈钢与参数化折面语言构成的果盘原型。通过线性顶视图与三维渲染的并置拼贴，直接呈现结构逻辑、孔洞秩序与产品气质。",
+      760
+    );
+    copyLines.slice(0, 2).forEach((line, index) => {
+      ctx.fillText(line, 78, 712 + index * 40);
+    });
+
+    const collageY = 810;
+    const collageH = 1060;
+    const compositeX = 78;
+    const panelW = 804;
+    const compositeW = panelW * 2;
+    const splitX = compositeX + panelW;
+
+    ctx.fillStyle = "rgba(255,255,255,0.62)";
+    ctx.fillRect(compositeX, collageY, compositeW, collageH);
+
+    const leftPanelBg = ctx.createLinearGradient(compositeX, collageY, compositeX + panelW, collageY + collageH);
+    leftPanelBg.addColorStop(0, "#fbf9f4");
+    leftPanelBg.addColorStop(0.52, "#ede8de");
+    leftPanelBg.addColorStop(1, "#e8dfd3");
+    ctx.fillStyle = leftPanelBg;
+    ctx.fillRect(compositeX, collageY, panelW, collageH);
+
+    ctx.fillStyle = "#f7f3eb";
+    ctx.fillRect(splitX, collageY, panelW, collageH);
+    drawTechGrid(ctx, splitX, collageY, panelW, collageH, 24, 120);
+
+    ctx.fillStyle = "#c63a32";
+    ctx.font = '600 23px "IBM Plex Mono","Consolas","Microsoft YaHei",sans-serif';
+    ctx.fillText("CMF RENDER / METALLIC SURFACE STUDY", compositeX, collageY - 18);
+    ctx.fillText("LINEAR TOP VIEW / GEOMETRY SYSTEM", splitX + 18, collageY - 18);
+
+    ctx.save();
+    ctx.filter = "blur(28px)";
+    ctx.fillStyle = "rgba(255,255,255,0.96)";
+    ctx.beginPath();
+    ctx.ellipse(compositeX + panelW * 0.48, collageY + collageH * 0.28, panelW * 0.28, 132, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    drawImageHalf(ctx, heroImage, compositeX, collageY, compositeW, collageH, "left", 0.5, 0.5, 1.08, "brightness(1.4) contrast(1.08) saturate(0.88)");
+    drawImageHalf(ctx, topViewImage, compositeX, collageY, compositeW, collageH, "right", 0.5, 0.52, 1.08, "none");
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(compositeX, collageY, panelW, collageH);
+    ctx.clip();
+    drawGlossBand(ctx, compositeX - 80, collageY + 140, panelW + 220, 260, -14, 0.95);
+    drawGlossBand(ctx, compositeX - 40, collageY + 470, panelW + 160, 220, 8, 0.58);
+    drawGlossBand(ctx, compositeX - 80, collageY + 820, panelW + 200, 240, -22, 0.42);
+    ctx.restore();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.86)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(splitX + 17, collageY + 22);
+    ctx.lineTo(splitX + 17, collageY + collageH - 22);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(0,0,0,0.08)";
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(compositeX, collageY, compositeW, collageH);
+
+    const specs = [
+      ["材质", "304 镜面不锈钢"],
+      ["方案模式", modeLabel],
+      ["细节逻辑", detailLabel],
+      ["折面数量", `${state.segments}`],
+      ["开口比例", `${state.opening.toFixed(2)}x`],
+      ["整体高度", `${geometry.metrics.bowlHeight} mm`],
+      ["整体半径", `${state.radius} mm`],
+      ["板材厚度", `${geometry.plateThickness.toFixed(1)} mm`],
+      ["轮廓边数", `${state.polygonSides} 边`],
+      ["表面气质", "高光镜面金属"],
+    ];
+
+    ctx.fillStyle = "#151515";
+    ctx.font = '800 46px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText("关键参数", 78, 1948);
+
+    const specStartY = 1988;
+    const specGap = 18;
+    const specCellW = 340;
+    const specCellH = 106;
+    specs.forEach(([label, value], index) => {
+      const col = index % 5;
+      const row = Math.floor(index / 5);
+      drawSpecCell(
+        ctx,
+        78 + col * (specCellW + specGap),
+        specStartY + row * (specCellH + 18),
+        specCellW,
+        specCellH,
+        label,
+        value,
+        index === 0
+      );
+    });
+
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) {
+      throw new Error("PNG 生成失败。");
+    }
+
+    downloadBlob(blob, `${getCurrentModelSlug()}-产品标签页.png`);
+    elements.statusLine.textContent = "已生成新版拼贴产品标签页 PNG：中间主图为左右完整半幅拼贴，并强化了三维高光反射。";
+  } catch (error) {
+    console.error(error);
+    elements.statusLine.textContent = "产品标签页 PNG 生成失败，请稍后重试。";
+  }
+}
+
+function downloadProductHeroImage() {
+  if (!threeState.ready || !threeState.renderer) {
+    elements.statusLine.textContent = "三维预览尚未完成初始化，暂时无法生成产品效果图。";
+    return;
+  }
+
+  try {
+    const dataUrl = captureThreeModelDataUrl({
+      width: 2200,
+      height: 1600,
+      transparent: true,
+      cameraPreset: "card",
+      exposure: 1.76,
+      highlightBoost: true,
+    });
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = `${getCurrentModelSlug()}-效果图.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.error(error);
+    elements.statusLine.textContent = "产品效果图导出失败，请确认三维预览已经加载完成。";
+  }
 }
 
 function drawImageContainedHalf(ctx, image, x, y, width, height, side, zoom = 1, filter = "none", offsetX = 0, offsetY = 0) {
@@ -3337,7 +4577,7 @@ async function generateProductDescription() {
   }
 }
 
-function exportThreePreviewImage() {
+function downloadProductHeroImage() {
   if (!threeState.ready || !threeState.renderer) {
     elements.statusLine.textContent = "三维预览尚未完成初始化，暂时无法生成产品效果图。";
     return;
@@ -3401,7 +4641,8 @@ function normalizeAIImageSource(source) {
   }
 
   if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed;
+    const separator = trimmed.includes("?") ? "&" : "?";
+    return `${trimmed}${separator}t=${Date.now()}`;
   }
 
   return trimmed;
@@ -3950,6 +5191,16 @@ elements.descriptionButton.addEventListener("click", () => {
   generateProductDescription();
 });
 
+elements.heroImageButton.addEventListener("click", () => {
+  downloadProductHeroImage();
+  if (threeState.ready) {
+    elements.statusLine.textContent = "已生成当前参数对应的产品效果图 PNG。";
+  }
+});
+
+const reboundHeroImageButton = elements.heroImageButton.cloneNode(true);
+elements.heroImageButton.replaceWith(reboundHeroImageButton);
+elements.heroImageButton = reboundHeroImageButton;
 elements.heroImageButton.addEventListener("click", () => {
   generateAIHeroImage();
 });
